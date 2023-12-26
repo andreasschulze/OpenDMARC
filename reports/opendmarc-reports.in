@@ -403,6 +403,15 @@ if (!defined($smtp))
 	exit(1);
 }
 
+my @dsn_opts_mail = ();
+my %dsn_opts_rcpt = ();
+my $esmtp = ${*$smtp}{'net_smtp_esmtp'};
+if (exists $esmtp->{DSN}) {
+  # set later with uniq report_id
+  # @dsn_opts_mail = ( Return => 'HDRS', ENVID => $report_id );
+  %dsn_opts_rcpt = ( Notify => ['FAILURE'] );
+}
+
 foreach (@$domainset)
 {
 	$domain = $_->[0];
@@ -965,6 +974,10 @@ foreach (@$domainset)
 			$datestr = strftime("%a, %e %b %Y %H:%M:%S %z (%Z)",
 			                    localtime);
 
+			if (exists $esmtp->{DSN}) {
+				@dsn_opts_mail = ( Return => 'HDRS', ENVID => $report_id );
+			}
+
 			$mailout  = "To: $repdest\n";
 			$mailout .= "From: $repemail\n";
 			$mailout .= "Subject: Report Domain: " . $domain . " Submitter: " . $repdom . " Report-ID: " . $report_id . "\n";
@@ -1009,11 +1022,12 @@ foreach (@$domainset)
 			{
 				$smtpstatus = "sent";
 				$smtpfail = 0;
-				# an RFC 3461 capable MTA generate DSN only on delivery failures,
-				# insert the report_id as 'Original-Envelope-Id:'
-				# and return only headers, never the full message
-				if (!$smtp->mail($repemail, ( Return => 'HDRS', ENVID => $report_id )) ||
-				    !$smtp->to($repdest, { Notify => ['FAILURE'] }) ||
+				# if the MTA do announce ESMTP and DSN support, request that
+				# - a DSN shoul be sent on delivery failure only, not on success or defer
+				# - a DSN should include the report_id as 'Original-Envelope-Id:'
+				# - a DSN should return only headers, never the full message
+				if (!$smtp->mail($repemail, @dsn_opts_mail) ||
+				    !$smtp->to($repdest, \%dsn_opts_rcpt) ||
 				    !$smtp->data() ||
 				    !$smtp->datasend($mailout) ||
 				    !$smtp->dataend())
