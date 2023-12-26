@@ -1015,7 +1015,7 @@ foreach (@$domainset)
 				$smtpstatus = "sent";
 				$smtpfail = 0;
 				# if the MTA do announce ESMTP and DSN support, request that
-				# - a DSN shoul be sent on delivery failure only, not on success or defer
+				# - a DSN should be sent on delivery failure only, not on success or defer
 				# - a DSN should include the report_id as 'Original-Envelope-Id:'
 				# - a DSN should return only headers, never the full message
 				if (!$smtp->mail($repemail, @dsn_opts_mail) ||
