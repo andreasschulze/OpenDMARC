@@ -36,6 +36,7 @@ my $version       = "@VERSION@";
 my $verbose       = 0;
 my $helponly      = 0;
 my $showversion   = 0;
+my $postfix_xverp = 0;
 
 my $interval;
 
@@ -165,6 +166,7 @@ sub usage
 	print STDERR "\t -n                synonym for --test\n";
 	print STDERR "\t--nodomain=name    omit a report for named domain\n";
 	print STDERR "\t--noupdate         don't record report transmission\n";
+	print STDERR "\t--postfix-xverp    use postfix' XVERP extention\n";
 	print STDERR "\t--report-email     reporting contact [$repemail]\n";
 	print STDERR "\t--report-org       reporting organization [$repdom]\n";
 	print STDERR "\t--smtp-port        smtp server port [$smtp_port]\n";
@@ -193,6 +195,7 @@ my $opt_retval = &Getopt::Long::GetOptions ('day!' => \$daybound,
                                             'keepfiles' => \$keepfiles,
                                             'n|test' => \$testmode,
                                             'nodomain=s' => \@skipdomains,
+                                            'postfix-xverp!' => \@postfix_xverp,
                                             'report-email=s' => \$repemail,
                                             'report-org=s' => \$repdom,
                                             'smtp-server=s' => \$smtp_server,
@@ -281,6 +284,14 @@ if (!defined($dbuser))
 	else
 	{
 		$dbuser = $def_dbuser;
+	}
+}
+
+if (!defined($postfix_xverp))
+{
+	if (defined($ENV{'OPENDMARC_XVERP'}))
+	{
+		$postfix_xverp = 1;
 	}
 }
 
@@ -402,14 +413,24 @@ if (!defined($smtp))
 	exit(1);
 }
 
-my @dsn_opts_mail = ();
-my %dsn_opts_rcpt = ();
+my @esmtp_opts_mail = ();
+my %esmtp_opts_rcpt = ();
 my $esmtp = ${*$smtp}{'net_smtp_esmtp'};
 if (exists $esmtp->{DSN}) {
   # set later with uniq report_id
-  # @dsn_opts_mail = ( Return => 'HDRS', ENVID => $report_id );
-  %dsn_opts_rcpt = ( Notify => ['FAILURE'] );
+  # @esmtp_opts_mail = ( Return => 'HDRS', ENVID => $report_id );
+  %esmtp_opts_rcpt = ( Notify => ['FAILURE'] );
 }
+
+if ($postfix_xverp)
+{
+        if (!exists $esmtp->{XVERP})
+        {
+                print STDERR "$progname: XVERP requested but not available\n";
+                exit(1);
+        }
+}
+
 
 foreach (@$domainset)
 {
@@ -969,7 +990,16 @@ foreach (@$domainset)
 			                    localtime);
 
 			if (exists $esmtp->{DSN}) {
-				@dsn_opts_mail = ( Return => 'HDRS', ENVID => $report_id );
+				# if the MTA do announce ESMTP and DSN support, request that
+				# - a DSN should be sent on delivery failure only, not on success or defer
+				# - a DSN should include the report_id as 'Original-Envelope-Id:'
+				# - a DSN should return only headers, never the full message
+				@esmtp_opts_mail = ( Return => 'HDRS', ENVID => $report_id );
+			}
+			if ($postfix_xverp) {
+				# enable XVERP if requested
+				# see https://www.postfix.org/VERP_README.html#smtp
+				push @esmtp_opts_mail, ( XVERP => 1 );
 			}
 
 			$mailout  = "To: $repdest\n";
@@ -1014,12 +1044,8 @@ foreach (@$domainset)
 			{
 				$smtpstatus = "sent";
 				$smtpfail = 0;
-				# if the MTA do announce ESMTP and DSN support, request that
-				# - a DSN should be sent on delivery failure only, not on success or defer
-				# - a DSN should include the report_id as 'Original-Envelope-Id:'
-				# - a DSN should return only headers, never the full message
-				if (!$smtp->mail($repemail, @dsn_opts_mail) ||
-				    !$smtp->to($repdest, \%dsn_opts_rcpt) ||
+				if (!$smtp->mail($repemail, @esmtp_opts_mail) ||
+				    !$smtp->to($repdest, \%esmtp_opts_rcpt) ||
 				    !$smtp->data() ||
 				    !$smtp->datasend($mailout) ||
 				    !$smtp->dataend())
