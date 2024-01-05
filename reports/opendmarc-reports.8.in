@@ -69,6 +69,9 @@ Suppresses marking the time of the transmission of the report in the database.
 Normally this would be done to prevent reports from being sent too close
 together.
 .TP
+.I postfix-xverp
+Use postfix' XVERP extention (https://www.postfix.org/VERP_README.html#smtp)
+.TP
 .I --report-email=addr
 Generates reports using the specified address, which is used in the report
 content and in the SMTP transaction.  The default is "postmaster@HOSTNAME"
