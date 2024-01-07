@@ -72,7 +72,7 @@ together.
 .I --postfix-xverp
 Use postfix' XVERP extention (https://www.postfix.org/VERP_README.html#smtp)
 Could also be enabled by setting the environment variable OPENDMARC_XVERP
-with any value.
+with any (even no/0) value.
 .TP
 .I --report-email=addr
 Generates reports using the specified address, which is used in the report

@@ -287,12 +287,9 @@ if (!defined($dbuser))
 	}
 }
 
-if (!defined($postfix_xverp))
+if (defined($ENV{'OPENDMARC_XVERP'}))
 {
-	if (defined($ENV{'OPENDMARC_XVERP'}))
-	{
-		$postfix_xverp = 1;
-	}
+	$postfix_xverp = 1;
 }
 
 if (defined($interval) && $daybound)
@@ -424,6 +421,11 @@ if (exists $esmtp->{DSN}) {
 
 if ($postfix_xverp)
 {
+	if ($verbose)
+	{
+		print STDERR "$progname: using postfix' XVERP\n";
+	}
+
         if (!exists $esmtp->{XVERP})
         {
                 print STDERR "$progname: XVERP requested but not available\n";
