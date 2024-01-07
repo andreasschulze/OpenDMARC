@@ -426,11 +426,11 @@ if ($postfix_xverp)
 		print STDERR "$progname: using postfix' XVERP\n";
 	}
 
-        if (!exists $esmtp->{XVERP})
-        {
-                print STDERR "$progname: XVERP requested but not available\n";
-                exit(1);
-        }
+	if (!exists $esmtp->{XVERP})
+	{
+		print STDERR "$progname: XVERP requested but not available\n";
+		exit(1);
+	}
 }
 
 
