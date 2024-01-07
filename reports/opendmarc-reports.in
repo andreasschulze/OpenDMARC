@@ -412,12 +412,12 @@ if (!defined($smtp))
 }
 
 my @esmtp_opts_mail = ();
-my %esmtp_opts_rcpt = ();
+my %esmtp_opts_to = ();
 my $esmtp = ${*$smtp}{'net_smtp_esmtp'};
 if (exists $esmtp->{DSN}) {
   # set later with uniq report_id
   # @esmtp_opts_mail = ( Return => 'HDRS', ENVID => $report_id );
-  %esmtp_opts_rcpt = ( Notify => ['FAILURE'] );
+  %esmtp_opts_to = ( Notify => ['FAILURE'] );
 }
 
 if ($postfix_xverp)
@@ -1055,7 +1055,7 @@ foreach (@$domainset)
 				$smtpstatus = "sent";
 				$smtpfail = 0;
 				if (!$smtp->mail($repemail, @esmtp_opts_mail) ||
-				    !$smtp->to($repdest, \%esmtp_opts_rcpt) ||
+				    !$smtp->to($repdest, \%esmtp_opts_to) ||
 				    !$smtp->data() ||
 				    !$smtp->datasend($mailout) ||
 				    !$smtp->dataend())
